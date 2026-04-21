@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>FrontLine — prototype</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: #1a1a1f;
+    color: #e6e6e6;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    min-height: 100vh;
+  }
+  #wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 18px;
+    gap: 12px;
+  }
+  h1 { font-size: 20px; margin: 0; letter-spacing: 1px; }
+  #hud {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: center;
+    width: 560px;
+  }
+  .stat {
+    padding: 8px 14px;
+    background: #25252c;
+    border: 1px solid #34343c;
+    border-radius: 4px;
+    font-size: 13px;
+    font-variant-numeric: tabular-nums;
+  }
+  .stat b { color: #fff; }
+  #status.win { color: #6be585; font-weight: bold; }
+  #status.lose { color: #e24b4a; font-weight: bold; }
+  #status.paused { color: #f0c040; font-weight: bold; }
+  canvas {
+    background: #D3D1C7;
+    border: 1px solid #3a3a44;
+    display: block;
+    cursor: crosshair;
+    image-rendering: pixelated;
+  }
+  #legend {
+    width: 560px;
+    font-size: 12px;
+    line-height: 1.55;
+    color: #b8b8b8;
+    background: #22222a;
+    border: 1px solid #2f2f38;
+    border-radius: 4px;
+    padding: 10px 14px;
+  }
+  #legend strong { color: #fff; }
+  .tag { display: inline-block; padding: 1px 6px; border-radius: 3px; color: #fff; font-weight: bold; font-size: 11px; }
+  .tag.gen { background: #378ADD; }
+  .tag.eco { background: #40a878; }
+  .tag.dip { background: #a86fd8; }
+  #overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.88);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+  }
+  #overlay.hidden { display: none; }
+  #role-select {
+    padding: 28px 32px;
+    background: #25252c;
+    border: 1px solid #3a3a44;
+    border-radius: 8px;
+    max-width: 520px;
+    text-align: center;
+  }
+  #role-select p { color: #bbb; font-size: 13px; margin: 10px 0 20px; }
+  .role-btn {
+    display: block;
+    width: 100%;
+    margin: 8px 0;
+    padding: 12px 16px;
+    color: white;
+    border: none;
+    cursor: pointer;
+    border-radius: 4px;
+    font-size: 14px;
+    text-align: left;
+    transition: transform 0.1s, filter 0.1s;
+  }
+  .role-btn:hover { filter: brightness(1.15); transform: translateX(2px); }
+  .role-btn small { display: block; font-weight: normal; opacity: 0.85; margin-top: 3px; font-size: 12px; }
+  .role-btn.gen { background: #378ADD; }
+  .role-btn.eco { background: #40a878; }
+  .role-btn.dip { background: #a86fd8; }
+  #restart {
+    padding: 6px 12px;
+    background: #444;
+    color: white;
+    border: none;
+    cursor: pointer;
+    border-radius: 4px;
+    font-size: 12px;
+  }
+  #restart:hover { background: #555; }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <h1>FRONTLINE</h1>
+  <div id="hud">
+    <div class="stat">Rôle: <b id="role">—</b></div>
+    <div class="stat">Gold: <b id="gold">0</b></div>
+    <div class="stat">Tuiles: <b id="tiles">0</b></div>
+    <div class="stat">Tick: <b id="tick">0</b></div>
+    <div class="stat" id="status">—</div>
+    <button id="restart" onclick="openRoleSelect()">Reset</button>
+  </div>
+  <canvas id="game" width="560" height="560"></canvas>
+  <div id="legend">
+    <strong>Rôles</strong> ·
+    <span class="tag gen">Général</span> propagation accélérée (+40% poussée) ·
+    <span class="tag eco">Économiste</span> revenu doublé (+100% gold) ·
+    <span class="tag dip">Diplomate</span> corruption à distance (25 gold / tuile)<br>
+    <strong>Contrôles</strong> · clic gauche sur tuile ennemie adjacente = attaque manuelle ·
+    clic gauche sur tuile amie = renfort (5 gold, +6 troupes) ·
+    clic droit sur tuile ennemie = corruption (Diplomate uniquement) ·
+    <b>Espace</b> = pause
+  </div>
+</div>
+
+<div id="overlay">
+  <div id="role-select">
+    <h1>Choisis ton rôle</h1>
+    <p>L'IA joue le rôle Général. Premier à éliminer l'autre gagne.</p>
+    <button class="role-btn gen" onclick="startGame('general')">Général<small>Propagation rapide · idéal pour écraser l'adversaire</small></button>
+    <button class="role-btn eco" onclick="startGame('economist')">Économiste<small>Plus de gold · idéal pour renforcer beaucoup</small></button>
+    <button class="role-btn dip" onclick="startGame('diplomat')">Diplomate<small>Corrompre des tuiles à distance au coût de gold</small></button>
+  </div>
+</div>
+
+<script>
+"use strict";
+
+const W = 40, H = 40, TS = 14;
+const NEUTRAL = 0, PLAYER = 1, AI = 2;
+const TICK_MS = 150;
+
+const COLOR = {
+  [NEUTRAL]: '#D3D1C7',
+  [PLAYER]:  '#378ADD',
+  [AI]:      '#E24B4A',
+};
+const FRONT_COLOR = {
+  [PLAYER]: '#7AB6F0',
+  [AI]:     '#F57A79',
+};
+
+const ROLE_LABEL = {
+  general:   'Général',
+  economist: 'Économiste',
+  diplomat:  'Diplomate',
+};
+
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+
+let grid;          // Uint8Array for owners
+let troops;        // Float32Array for troops counts
+let role = null;
+let gold = 10;
+let tickCount = 0;
+let paused = false;
+let gameOver = false;
+let statusMsg = '';
+
+function idx(x, y) { return y * W + x; }
+function inBounds(x, y) { return x >= 0 && x < W && y >= 0 && y < H; }
+
+function initGrid() {
+  grid = new Uint8Array(W * H);
+  troops = new Float32Array(W * H);
+  for (let i = 0; i < W * H; i++) {
+    grid[i] = NEUTRAL;
+    troops[i] = 2 + Math.random() * 3;
+  }
+  // Player area: bottom-left 5x5
+  for (let y = H - 5; y < H; y++) {
+    for (let x = 0; x < 5; x++) {
+      grid[idx(x, y)] = PLAYER;
+      troops[idx(x, y)] = 12;
+    }
+  }
+  // AI area: top-right 5x5
+  for (let y = 0; y < 5; y++) {
+    for (let x = W - 5; x < W; x++) {
+      grid[idx(x, y)] = AI;
+      troops[idx(x, y)] = 12;
+    }
+  }
+}
+
+function isFront(x, y) {
+  const owner = grid[idx(x, y)];
+  if (owner === NEUTRAL) return false;
+  if (x + 1 < W && grid[idx(x + 1, y)] !== owner) return true;
+  if (x - 1 >= 0 && grid[idx(x - 1, y)] !== owner) return true;
+  if (y + 1 < H && grid[idx(x, y + 1)] !== owner) return true;
+  if (y - 1 >= 0 && grid[idx(x, y - 1)] !== owner) return true;
+  return false;
+}
+
+function pushFactor(owner) {
+  if (owner === PLAYER && role === 'general') return 1.4;
+  if (owner === AI) return 1.15;
+  return 1.0;
+}
+
+function simulateTick() {
+  tickCount++;
+
+  // Count & income & growth pass
+  let playerTiles = 0, aiTiles = 0;
+  for (let i = 0; i < grid.length; i++) {
+    const o = grid[i];
+    if (o === PLAYER) {
+      playerTiles++;
+      if (troops[i] < 25) troops[i] += 0.05;
+    } else if (o === AI) {
+      aiTiles++;
+      if (troops[i] < 25) troops[i] += 0.05;
+    }
+  }
+  const goldMult = role === 'economist' ? 2.0 : 1.0;
+  gold += 0.1 * goldMult * playerTiles;
+
+  // BFS-style propagation: find all front tiles, each attacks one weakest neighbor.
+  // We write into new arrays to avoid same-tick double-moves.
+  const nextGrid = new Uint8Array(grid);
+  const nextTroops = new Float32Array(troops);
+
+  // Randomize scan order for fairness
+  const order = new Int32Array(W * H);
+  for (let i = 0; i < order.length; i++) order[i] = i;
+  for (let i = order.length - 1; i > 0; i--) {
+    const j = (Math.random() * (i + 1)) | 0;
+    const tmp = order[i]; order[i] = order[j]; order[j] = tmp;
+  }
+
+  for (let k = 0; k < order.length; k++) {
+    const i = order[k];
+    const o = grid[i];
+    if (o === NEUTRAL) continue;
+
+    const x = i % W, y = (i / W) | 0;
+
+    // Find weakest adjacent non-friendly target using current grid
+    let targetIdx = -1, targetScore = Infinity;
+    const dx = [1, -1, 0, 0], dy = [0, 0, 1, -1];
+    for (let d = 0; d < 4; d++) {
+      const nx = x + dx[d], ny = y + dy[d];
+      if (!inBounds(nx, ny)) continue;
+      const ni = idx(nx, ny);
+      if (grid[ni] === o) continue;
+      if (troops[ni] < targetScore) {
+        targetScore = troops[ni];
+        targetIdx = ni;
+      }
+    }
+    if (targetIdx === -1) continue;
+
+    // Only attack if we have enough troops to sustain pressure
+    if (troops[i] < 2.0) continue;
+
+    const attackStrength = troops[i] * pushFactor(o) * 0.35;
+    const defTroops = nextTroops[targetIdx];
+
+    if (nextGrid[targetIdx] !== o && attackStrength > defTroops) {
+      // Conquer
+      nextGrid[targetIdx] = o;
+      nextTroops[targetIdx] = Math.max(1, attackStrength - defTroops);
+      nextTroops[i] = Math.max(1, nextTroops[i] - attackStrength);
+    } else {
+      // Attrition on defender
+      nextTroops[targetIdx] = Math.max(0, defTroops - attackStrength * 0.6);
+      nextTroops[i] = Math.max(1, nextTroops[i] - attackStrength * 0.3);
+    }
+  }
+
+  grid = nextGrid;
+  troops = nextTroops;
+
+  // Victory check
+  if (playerTiles === 0) {
+    gameOver = true;
+    statusMsg = 'DÉFAITE';
+  } else if (aiTiles === 0) {
+    gameOver = true;
+    statusMsg = 'VICTOIRE';
+  }
+}
+
+function draw() {
+  ctx.fillStyle = COLOR[NEUTRAL];
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      const o = grid[idx(x, y)];
+      if (o === NEUTRAL) continue;
+      ctx.fillStyle = isFront(x, y) ? FRONT_COLOR[o] : COLOR[o];
+      ctx.fillRect(x * TS, y * TS, TS, TS);
+    }
+  }
+
+  // Subtle grid on top so the board reads clearly
+  ctx.strokeStyle = 'rgba(0,0,0,0.04)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  for (let i = 0; i <= W; i++) {
+    ctx.moveTo(i * TS + 0.5, 0);
+    ctx.lineTo(i * TS + 0.5, H * TS);
+  }
+  for (let j = 0; j <= H; j++) {
+    ctx.moveTo(0, j * TS + 0.5);
+    ctx.lineTo(W * TS, j * TS + 0.5);
+  }
+  ctx.stroke();
+}
+
+function countTiles(owner) {
+  let n = 0;
+  for (let i = 0; i < grid.length; i++) if (grid[i] === owner) n++;
+  return n;
+}
+
+function updateHUD() {
+  document.getElementById('role').textContent = role ? ROLE_LABEL[role] : '—';
+  document.getElementById('gold').textContent = Math.floor(gold);
+  document.getElementById('tiles').textContent = countTiles(PLAYER);
+  document.getElementById('tick').textContent = tickCount;
+  const st = document.getElementById('status');
+  st.className = '';
+  if (gameOver) {
+    st.textContent = statusMsg;
+    st.className = statusMsg === 'VICTOIRE' ? 'win' : 'lose';
+  } else if (paused) {
+    st.textContent = 'PAUSE';
+    st.className = 'paused';
+  } else {
+    st.textContent = 'En cours';
+  }
+}
+
+// --- Main loop ---
+let lastTick = 0;
+function loop(ts) {
+  if (!paused && !gameOver && role) {
+    if (ts - lastTick >= TICK_MS) {
+      simulateTick();
+      lastTick = ts;
+    }
+  } else {
+    lastTick = ts;
+  }
+  draw();
+  updateHUD();
+  requestAnimationFrame(loop);
+}
+
+// --- Input ---
+function tileFromEvent(e) {
+  const rect = canvas.getBoundingClientRect();
+  const sx = canvas.width / rect.width;
+  const sy = canvas.height / rect.height;
+  const x = (((e.clientX - rect.left) * sx) / TS) | 0;
+  const y = (((e.clientY - rect.top) * sy) / TS) | 0;
+  if (!inBounds(x, y)) return null;
+  return { x, y };
+}
+
+canvas.addEventListener('click', (e) => {
+  if (!role || gameOver) return;
+  const t = tileFromEvent(e);
+  if (!t) return;
+  const i = idx(t.x, t.y);
+  const o = grid[i];
+
+  if (o === PLAYER) {
+    if (gold >= 5) {
+      gold -= 5;
+      troops[i] = Math.min(30, troops[i] + 6);
+    }
+    return;
+  }
+
+  // Enemy/neutral — must be adjacent to a player tile
+  let adjIdx = -1;
+  const dx = [1, -1, 0, 0], dy = [0, 0, 1, -1];
+  for (let d = 0; d < 4; d++) {
+    const nx = t.x + dx[d], ny = t.y + dy[d];
+    if (!inBounds(nx, ny)) continue;
+    const ni = idx(nx, ny);
+    if (grid[ni] === PLAYER) { adjIdx = ni; break; }
+  }
+  if (adjIdx === -1) return;
+
+  // Summed force from all adjacent player tiles
+  let force = 0;
+  for (let d = 0; d < 4; d++) {
+    const nx = t.x + dx[d], ny = t.y + dy[d];
+    if (!inBounds(nx, ny)) continue;
+    const ni = idx(nx, ny);
+    if (grid[ni] === PLAYER) {
+      const sent = troops[ni] * 0.5;
+      force += sent;
+      troops[ni] = Math.max(1, troops[ni] - sent);
+    }
+  }
+  if (force > troops[i]) {
+    grid[i] = PLAYER;
+    troops[i] = Math.max(1, force - troops[i]);
+  } else {
+    troops[i] = Math.max(0, troops[i] - force);
+  }
+});
+
+canvas.addEventListener('contextmenu', (e) => {
+  e.preventDefault();
+  if (!role || gameOver) return;
+  if (role !== 'diplomat') return;
+  const t = tileFromEvent(e);
+  if (!t) return;
+  const i = idx(t.x, t.y);
+  if (grid[i] !== AI) return;
+  if (gold < 25) return;
+  gold -= 25;
+  grid[i] = PLAYER;
+  troops[i] = 4;
+});
+
+document.addEventListener('keydown', (e) => {
+  if (e.code === 'Space') {
+    e.preventDefault();
+    if (!gameOver && role) paused = !paused;
+  }
+});
+
+function startGame(r) {
+  role = r;
+  gold = 10;
+  tickCount = 0;
+  paused = false;
+  gameOver = false;
+  statusMsg = '';
+  initGrid();
+  document.getElementById('overlay').classList.add('hidden');
+}
+
+function openRoleSelect() {
+  paused = true;
+  document.getElementById('overlay').classList.remove('hidden');
+}
+
+// Boot — render a neutral board before role is picked
+initGrid();
+// Clear player/AI seed tiles until role is chosen so the preview reads as neutral
+for (let i = 0; i < grid.length; i++) grid[i] = NEUTRAL;
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
