@@ -129,6 +129,86 @@ def cmd_replay(args) -> int:
     return 0
 
 
+def cmd_test_live(args) -> int:
+    """Enregistre N minutes d'un live + son chat, puis monte UN clip même sans moment fort.
+
+    Test technique uniquement : rien n'est publié."""
+    import time
+
+    from .config import Streamer
+    from .db import DB
+    from .detect.signals import Peak
+    from .pipeline import StreamContext, analyze_peak, find_candidates, render_stored_clip
+    from .publish.metadata import build_metadata
+    from .twitch.chat import ChatHub
+
+    s = load_settings()
+    login = args.login.lower().rstrip("/").split("/")[-1]
+    streamer = next((x for x in load_streamers() if x.login == login), Streamer(login=login, nom=login))
+    out = s.data_dir / "livetest" / f"{login}-{time.strftime('%Y%m%d-%H%M%S')}"
+    out.mkdir(parents=True, exist_ok=True)
+    video = out / "stream.ts"
+    seconds = int(args.minutes * 60)
+
+    async def record() -> tuple[list[tuple[float, str]], float | None]:
+        hub = ChatHub()
+        await hub.join(login)
+        chat_task = asyncio.create_task(hub.run())
+        print(f"Enregistrement de twitch.tv/{login} pendant {args.minutes:g} min ({args.quality})…")
+        proc = await asyncio.create_subprocess_exec(
+            "streamlink", "--retry-open", "3", "-o", str(video), "-f",
+            f"twitch.tv/{login}", args.quality, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.STDOUT)
+        start_wall = None
+        t0 = time.time()
+        while time.time() - t0 < seconds and proc.returncode is None:
+            await asyncio.sleep(1)
+            if start_wall is None and video.exists() and video.stat().st_size > 0:
+                start_wall = time.time()
+        if proc.returncode is None:
+            proc.terminate()
+            await proc.wait()
+        try:
+            err = (await asyncio.wait_for(proc.stdout.read(), 5)).decode(errors="replace") if proc.stdout else ""
+        except asyncio.TimeoutError:
+            err = ""
+        chat_task.cancel()
+        if not video.exists() or video.stat().st_size == 0:
+            print(f"Échec de l'enregistrement : {err.strip()[-400:] or 'aucune donnée'}", file=sys.stderr)
+        msgs = list(hub.messages.get(login, []))
+        return ([(round(w - start_wall, 2), t) for w, t in msgs if start_wall and w >= start_wall], start_wall)
+
+    chat, start_wall = asyncio.run(record())
+    if start_wall is None:
+        return 1
+    from .media.ffmpeg import probe
+
+    dur = probe(video)["duration"]
+    print(f"{dur:.0f} s de vidéo, {len(chat)} messages de chat. Analyse…")
+    db = DB(s.data_dir / "clipfactory.db")
+    stream_id = db.insert("streams", {"login": login, "twitch_id": f"test-{out.name}", "title": "test-live",
+                                      "started_at": start_wall, "ended_at": time.time(), "status": "termine",
+                                      "record_path": str(video), "recorded_seconds": dur})
+    ctx = StreamContext(stream_id, streamer)
+    peaks, cheap = find_candidates(video, 0, dur, chat, ctx, s)
+    peak = peaks[0] if peaks else Peak(peak=min(dur - 5, max(30.0, dur * 0.6)), value=0.0)
+    cand, analysis, score = analyze_peak(video, peak, chat, ctx, s, cheap, None, dur)
+    meta = build_metadata(streamer, analysis, "", s)
+    clip_id = db.insert("clips", {
+        "stream_id": stream_id, "login": login, "start": analysis.start, "end": analysis.end, "peak": cand.peak,
+        "created_at": time.time(), "status": "test", "score": score, "category": analysis.category,
+        "reason": analysis.why, "title": meta["title"], "hook": analysis.hook, "description": meta["description"],
+        "hashtags": meta["hashtags"], "credit": meta["credit"], "signals": cand.signals,
+        "analysis": {"engine": analysis.engine, "words": [[w.text, w.start, w.end] for w in cand.words]},
+        "duration": round(analysis.end - analysis.start, 2)})
+    render_stored_clip(db, clip_id, video, s, streamer)
+    clip = db.one("SELECT * FROM clips WHERE id = ?", [clip_id])
+    print(f"\nClip #{clip_id} — score {score}/100 ({'pic détecté' if peaks else 'aucun pic : fenêtre prise au hasard'})")
+    print(f"  layout : {clip['layout']}  durée : {clip['duration']} s  mots transcrits : {len(cand.words)}")
+    print(f"  raison : {clip['reason']}")
+    print(f"  fichier : {clip['file'] or clip['error']}")
+    return 0 if clip.get("file") else 1
+
+
 def main(argv: list[str] | None = None) -> int:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
     for noisy in ("httpx", "httpx2", "faster_whisper", "websockets"):
@@ -154,6 +234,11 @@ def main(argv: list[str] | None = None) -> int:
     sp.add_argument("--chat")
     sp.add_argument("--speed", type=float, default=8.0)
     sp.set_defaults(fn=cmd_replay)
+    sp = sub.add_parser("test-live", help="enregistre quelques minutes d'un live et monte un clip (test, sans publication)")
+    sp.add_argument("login")
+    sp.add_argument("--minutes", type=float, default=3)
+    sp.add_argument("--quality", default="720p60,720p,480p,best")
+    sp.set_defaults(fn=cmd_test_live)
     args = p.parse_args(argv)
     return args.fn(args)
 
