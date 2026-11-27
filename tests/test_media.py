@@ -101,3 +101,15 @@ def test_yunet_detects_public_domain_face():
     img = cv2.cvtColor(skimage.data.astronaut(), cv2.COLOR_RGB2BGR)
     faces = detect_faces(img)
     assert faces and 150 < faces[0][0] < 220
+
+
+def test_real_duration_removes_fmp4_start_offset():
+    from clipfactory.media.ffmpeg import real_duration
+
+    # Live Twitch enregistré par streamlink : MP4 fragmenté qui démarre à ~4 h 27 de live
+    fmp4 = {"format_name": "mov,mp4,m4a,3gp,3g2,mj2", "start_time": "16040.033", "duration": "16220.064333"}
+    assert abs(real_duration(fmp4) - 180.031) < 0.01
+    # MPEG-TS : ffprobe retranche déjà le départ
+    assert real_duration({"format_name": "mpegts", "start_time": "16040.0", "duration": "180.0"}) == 180.0
+    assert real_duration({"format_name": "mov,mp4,m4a,3gp,3g2,mj2", "start_time": "0", "duration": "60"}) == 60.0
+    assert real_duration({}) == 0.0

@@ -14,6 +14,10 @@ dependencies = [
   "streamlink>=7",
   "faster-whisper>=1.0",
   "opencv-python-headless>=4.9,<5",
+  # scenedetect exige opencv-python : sans borne, pip installe OpenCV 5 qui écrase le module cv2 4.x
+  "opencv-python>=4.9,<5",
+  # Windows n'a pas de base de fuseaux horaires système : sans tzdata, ZoneInfo("Europe/Paris") échoue
+  "tzdata; sys_platform == 'win32'",
   "anthropic>=2.14",
   "scenedetect>=0.6.4",
 ]
