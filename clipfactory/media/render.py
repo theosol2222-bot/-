@@ -160,20 +160,13 @@ def choose_layout(source: Path | str, start: float, end: float, segments: list[t
     kind = info.layout if forced == "auto" else forced
     lay = Layout(kind, info.cam, info.focus)
     if kind == "center" and info.layout == "center":
-        # suivi : position du visage sur ~1 image/s, lissée
-        times = list(np.arange(start + 0.5, end, 1.0))
-        frames = face_mod.sample_frames(source, times)
-        pts = []
-        for t, f in zip(times, frames):
-            faces = face_mod.detect_faces(f)
-            if faces:
-                x, y, w, h = max(faces, key=lambda b: b[2] * b[3])
-                out_t = remap(t, segments)
-                if out_t is not None:
-                    pts.append((out_t, (x + w / 2) / f.shape[1]))
-        if len(pts) >= 3:
-            xs = np.convolve([p[1] for p in pts], np.ones(3) / 3, mode="same")
-            lay.track = [(t, float(x)) for (t, _), x in zip(pts, xs)]
+        # caméra « trépied lourd » + recadrage net aux changements de plan
+        src = probe(source)
+        crop_w_src = src["height"] * OUT_W / OUT_H
+        cuts = face_mod.scene_cuts(source, start, end)
+        traj = face_mod.track(source, start, end, crop_w_src, src["width"], cuts)
+        pts = [(remap(t, segments), cx / src["width"]) for t, cx in traj]
+        lay.track = [(t, x) for t, x in pts if t is not None]
     if kind == "split" and not lay.cam:
         lay.kind = "fill"
     return lay, info
@@ -207,6 +200,8 @@ def render_clip(source: Path | str, start: float, end: float, words: list[Word],
     if lay.kind == "split":  # accroche sur la jonction cam/jeu, jamais sur le visage
         cam_h = even(min(OUT_H * 0.5, max(480, lay.cam_height)))
         hook_y, credit_y, style.y = cam_h + 50, cam_h - 40, cam_h + 400
+    elif lay.kind == "center":  # caméra plein cadre : le visage occupe le haut, textes en dessous
+        hook_y, credit_y, style.y = 1000, 215, 1200
     out.parent.mkdir(parents=True, exist_ok=True)
 
     with tempfile.TemporaryDirectory() as tmp:

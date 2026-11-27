@@ -55,3 +55,49 @@ def test_layout_graphs_are_well_formed():
         assert g.startswith("[vc]") and g.endswith("[lv]")
         assert g.count("(") == g.count(")")
     assert tracking_expr([(0, 100), (2, 200)]).startswith("if(lt(t,0.00)")
+
+
+def test_tripod_camera_ignores_lone_jump_and_follows_confirmed_move():
+    from clipfactory.media.face import TripodCamera
+
+    cam = TripodCamera(crop_width=600, video_width=1920)
+    cam.observe(900)                      # première détection : cadrage net
+    assert cam.step(0.25) == 900
+    cam.observe(1500)                     # saut isolé (faux positif) : ignoré
+    cam.observe(905)
+    assert cam.target == 905
+    for _ in range(3):                    # vrai déplacement confirmé 3 fois
+        cam.observe(1500)
+    assert cam.target == 1500
+    assert 900 < cam.step(0.25) < 1500    # panoramique progressif, pas de saut
+
+
+def test_tripod_camera_snaps_on_scene_cut():
+    from clipfactory.media.face import TripodCamera
+
+    cam = TripodCamera(600, 1920)
+    cam.observe(500)
+    cam.cut()
+    cam.observe(1400)
+    assert cam.step(0.25) == 1400
+
+
+def test_simplify_keeps_corners_only():
+    from clipfactory.media.face import simplify
+
+    pts = [(t / 4, 500.0) for t in range(20)] + [(5 + t / 4, 500 + t * 20.0) for t in range(10)]
+    out = simplify(pts)
+    assert len(out) <= 4 and out[0] == pts[0] and out[-1] == pts[-1]
+
+
+def test_yunet_detects_public_domain_face():
+    import cv2
+    import pytest
+
+    skimage = pytest.importorskip("skimage")
+    from clipfactory.media.face import YUNET, detect_faces
+
+    assert YUNET.exists()
+    img = cv2.cvtColor(skimage.data.astronaut(), cv2.COLOR_RGB2BGR)
+    faces = detect_faces(img)
+    assert faces and 150 < faces[0][0] < 220

@@ -14,18 +14,18 @@ Lives Twitch ─► détection (volume + chat FR) ─► Whisper FR ─► Claud
 | Fonction | État |
 |---|---|
 | Liste de streamers modifiable à chaud (`config/streamers.yaml`, 13 préconfigurés) | ✅ |
-| Détection des lancements de live (API Helix officielle) | ✅ testé avec API simulée — à valider avec vos identifiants |
+| Détection des lancements de live (API Helix officielle ; repli streamlink sans identifiants) | ✅ repli testé sur Twitch réel ; Helix testé avec API simulée |
 | Chat Twitch temps réel, multi-chaînes, sans pseudos | ✅ **testé sur le vrai chat** (Domingo, JL Tomy) |
 | Enregistrement + alignement chat/vidéo malgré les pubs (streamlink) | ✅ format de log vérifié sur streamlink 8.6 |
 | Signaux FR : pics de chat, répétitions, emotes, rires, expressions, volume | ✅ |
 | Compréhension du contexte par Claude + score viral /100 (repli heuristique gratuit) | ✅ testé avec client simulé — à valider avec une clé API |
-| Montage 9:16 : facecam détectée seule, sous-titres dynamiques, coupe des blancs, accroche, crédit, miniature | ✅ testé de bout en bout |
+| Montage 9:16 : facecam détectée seule (YuNet), caméra stabilisée et recadrage aux changements de plan (openshorts, PySceneDetect), sous-titres dynamiques, coupe des blancs, accroche, crédit, miniature | ✅ testé de bout en bout |
 | Anti-doublon (même live, autre POV), créneaux FR, quotas, espacement | ✅ |
 | Publication TikTok (manuel / brouillon / direct) + statistiques | ✅ testé avec API simulée — nécessite votre app TikTok |
 | Tableau de bord (lives, chat, clips, aperçus, validation, planning, stats, coûts) | ✅ |
 | Blocage de publication sans autorisation du streamer | ✅ |
 
-**33 tests automatisés**, dont un test de bout en bout sur un faux live (voix FR, facecam, chat
+**37 tests automatisés**, dont un test de bout en bout sur un faux live (voix FR, facecam, chat
 simulé) : le vrai moment est noté 76-85/100 et monté, les passages calmes 31-35/100 et ignorés.
 
 ## Démarrage rapide

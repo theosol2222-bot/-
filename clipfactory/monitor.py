@@ -176,7 +176,13 @@ class Monitor:
         self.streamers = load_streamers()  # la liste est modifiable à chaud
         active = [s for s in self.streamers if s.actif]
         if self.helix is None:
-            self.helix = Helix(secret("TWITCH_CLIENT_ID") or "", secret("TWITCH_CLIENT_SECRET") or "")
+            if secret("TWITCH_CLIENT_ID") and secret("TWITCH_CLIENT_SECRET"):
+                self.helix = Helix(secret("TWITCH_CLIENT_ID") or "", secret("TWITCH_CLIENT_SECRET") or "")
+            else:
+                from .twitch.livecheck import StreamlinkLiveChecker
+
+                self.db.log("Identifiants Twitch absents : détection des lives via streamlink (mode dégradé)", "warning")
+                self.helix = StreamlinkLiveChecker()  # type: ignore[assignment]
         lives = await asyncio.to_thread(self.helix.live, [s.login for s in active])
         self.db.kv_set("lives", {k: v.__dict__ for k, v in lives.items()})
         self.db.kv_set("last_poll", time.time())

@@ -11,3 +11,10 @@ typology, automatic facecam detection, face tracking, streamlink 8 log format.
 
 Test fixture image: "astronaut" from scikit-image (NASA photograph, public domain).
 French test voice: Piper fr_FR-siwis-medium (downloaded at test time, not redistributed).
+
+clipfactory/media/face.py: TripodCamera is adapted from SmoothedCameraman in
+https://github.com/mutonby/openshorts (MIT License).
+clipfactory/media/models/face_detection_yunet_2023mar.onnx: YuNet face detector
+from https://github.com/opencv/opencv_zoo (Apache License 2.0), obtained from
+https://huggingface.co/opencv/face_detection_yunet.
+Scene detection uses PySceneDetect (BSD-3-Clause) as a library.
