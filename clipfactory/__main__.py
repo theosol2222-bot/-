@@ -29,9 +29,14 @@ def cmd_doctor(_args) -> int:
         print(f"  {'✔' if good else '✘'} {label}" + ("" if good else f"  → {hint}"))
 
     print("Installation :")
-    for binary in ("ffmpeg", "ffprobe", "streamlink"):
-        check(binary, shutil.which(binary) is not None, f"installez {binary}")
-    for mod, hint in (("faster_whisper", "pip install faster-whisper"), ("cv2", "pip install 'opencv-python-headless<5'"),
+    from .media.ffmpeg import check_binary
+
+    for binary in ("ffmpeg", "ffprobe"):
+        good, detail = check_binary(binary)
+        check(binary, good, detail)
+    check("streamlink", shutil.which("streamlink") is not None, "installez streamlink")
+    cv2_hint = "pip install 'opencv-python<5' 'opencv-python-headless<5' (OpenCV 5 n'est pas supporté)"
+    for mod, hint in (("faster_whisper", "pip install faster-whisper"), ("cv2", cv2_hint),
                       ("anthropic", "pip install anthropic"), ("fastapi", "pip install fastapi uvicorn")):
         try:
             m = __import__(mod)
@@ -210,6 +215,10 @@ def cmd_test_live(args) -> int:
 
 
 def main(argv: list[str] | None = None) -> int:
+    # La console Windows est en cp1252 : sans ça, ✔/✘/→/… font planter les print.
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(encoding="utf-8", errors="replace")
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
     for noisy in ("httpx", "httpx2", "faster_whisper", "websockets"):
         logging.getLogger(noisy).setLevel(logging.WARNING)
