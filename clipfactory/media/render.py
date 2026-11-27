@@ -31,7 +31,8 @@ def even(v: float) -> int:
 # Temps morts
 # ---------------------------------------------------------------------------
 def keep_segments(start: float, end: float, words: list[Word], db: np.ndarray | None = None,
-                  min_gap: float = 1.2, pad: float = 0.25, lead_max: float = 1.0) -> list[tuple[float, float]]:
+                  min_gap: float = 1.2, pad: float = 0.25, lead_max: float = 1.0,
+                  min_total: float = 0.0) -> list[tuple[float, float]]:
     """Segments à garder dans [start, end] : on retire les silences de parole
     longs, sauf s'il s'y passe quelque chose de fort à l'audio (cri, explosion,
     rire sans mots). `db` = dB par seconde depuis `start`."""
@@ -60,7 +61,25 @@ def keep_segments(start: float, end: float, words: list[Word], db: np.ndarray | 
         cursor = b
     if end - cursor > 0.05:
         segments.append((cursor, end))
-    return segments or [(start, end)]
+    segments = segments or [(start, end)]
+    # La durée minimale s'applique APRÈS la coupe des blancs : on rend les
+    # silences les plus courts jusqu'à l'atteindre (ou toute la fenêtre).
+    total = sum(b - a for a, b in segments)
+    if total < min_total and len(segments) > 1:
+        gaps = sorted(range(len(segments) - 1), key=lambda i: segments[i + 1][0] - segments[i][1])
+        restored: set[int] = set()
+        for i in gaps:
+            if total >= min_total:
+                break
+            restored.add(i)
+            total += segments[i + 1][0] - segments[i][1]
+        merged = [segments[0]]
+        for i, seg in enumerate(segments[1:]):
+            merged[-1] = (merged[-1][0], seg[1]) if i in restored else merged[-1]
+            if i not in restored:
+                merged.append(seg)
+        segments = merged
+    return segments
 
 
 def remap(t: float, segments: list[tuple[float, float]]) -> float | None:
@@ -191,7 +210,8 @@ def render_clip(source: Path | str, start: float, end: float, words: list[Word],
     if not info["width"]:
         raise ValueError("Pas de piste vidéo dans la source")
     db = loudness(source, start, end - start) if info["has_audio"] else None
-    segments = (keep_segments(start, end, words, db, min_gap=float(get("render.silence_min_gap", 1.2)))
+    segments = (keep_segments(start, end, words, db, min_gap=float(get("render.silence_min_gap", 1.2)),
+                              min_total=min(end - start, float(get("render.min_duration", 20))))
                 if get("render.remove_silences", True) else [(start, end)])
     duration = sum(b - a for a, b in segments)
     lay, _ = choose_layout(source, start, end, segments, layout, facecam)

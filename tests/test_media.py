@@ -101,3 +101,16 @@ def test_yunet_detects_public_domain_face():
     img = cv2.cvtColor(skimage.data.astronaut(), cv2.COLOR_RGB2BGR)
     faces = detect_faces(img)
     assert faces and 150 < faces[0][0] < 220
+
+
+def test_keep_segments_respects_min_duration_after_silence_cut():
+    from clipfactory.detect.signals import Word
+    from clipfactory.media.render import keep_segments
+
+    # 4 phrases d'1 s séparées de 6 s de silence : sans plancher il ne resterait que ~6 s
+    words = [Word(f"mot{i}", 10 + i * 7, 11 + i * 7) for i in range(4)]
+    cut = keep_segments(10, 32, words)
+    assert sum(b - a for a, b in cut) < 10
+    kept = keep_segments(10, 32, words, min_total=20)
+    assert sum(b - a for a, b in kept) >= 20
+    assert kept[0][0] >= 10 and kept[-1][1] <= 32
