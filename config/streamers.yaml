@@ -30,3 +30,4 @@ streamers:
   - { login: etoiles,    nom: Étoiles,    actif: true, autorisation: aucune, mots_cles: [] }
   # Login Twitch de Mister V non confirmé : lancez `clipfactory verify` et corrigez si besoin.
   - { login: misterv,    nom: Mister V,   actif: true, autorisation: aucune, mots_cles: [] }
+  - { login: hogodelire, nom: HogoDelire, actif: true, autorisation: aucune, mots_cles: [] }
