@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Clip Factory</title>
+<style>
+:root{color-scheme:light;--bg:#f6f6f4;--surface:#fff;--surface-2:#f0efec;--line:#e4e2dd;--text:#191919;--text-2:#666;--accent:#257de0;--accent-ink:#fff;--live:#d93636;--good:#0a7d24;--warn:#a86b00;--bad:#c43030;--series-1:#257de0;--radius:14px}
+@media (prefers-color-scheme:dark){:root:where(:not([data-theme="light"])){color-scheme:dark;--bg:#121212;--surface:#1b1b1b;--surface-2:#242424;--line:#2e2e2e;--text:#efefef;--text-2:#9c9c9c;--accent:#338ced;--live:#ef5a5a;--good:#3fbf5a;--warn:#e0a31a;--bad:#ef6262;--series-1:#338ced}}
+:root[data-theme="dark"]{color-scheme:dark;--bg:#121212;--surface:#1b1b1b;--surface-2:#242424;--line:#2e2e2e;--text:#efefef;--text-2:#9c9c9c;--accent:#338ced;--live:#ef5a5a;--good:#3fbf5a;--warn:#e0a31a;--bad:#ef6262;--series-1:#338ced}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:15px/1.45 Inter,system-ui,-apple-system,Segoe UI,sans-serif}
+header{position:sticky;top:0;z-index:5;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.bar{max-width:1280px;margin:0 auto;padding:12px 16px;display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+.brand{font-weight:750;letter-spacing:-.02em;font-size:17px}.brand span{color:var(--live)}
+nav{display:flex;gap:4px;flex-wrap:wrap}nav button{border:0;background:none;color:var(--text-2);padding:7px 11px;border-radius:9px;font:inherit;cursor:pointer}
+nav button.on{background:var(--surface-2);color:var(--text);font-weight:600}.badge{display:inline-block;min-width:18px;padding:0 6px;border-radius:9px;background:var(--accent);color:var(--accent-ink);font-size:12px;margin-left:4px}
+.right{margin-left:auto;display:flex;gap:10px;align-items:center;color:var(--text-2);font-size:13px}
+main{max-width:1280px;margin:0 auto;padding:20px 16px 60px}
+h2{font-size:15px;margin:26px 0 10px;color:var(--text-2);font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+.grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(250px,1fr))}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:14px}
+.tiles{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}
+.tile .v{font-size:28px;font-weight:700;letter-spacing:-.02em}.tile .l{color:var(--text-2);font-size:13px}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--line);margin-right:6px}.dot.live{background:var(--live);box-shadow:0 0 0 4px color-mix(in srgb,var(--live) 25%,transparent)}
+.muted{color:var(--text-2)}.small{font-size:13px}.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.chip{font-size:12px;padding:2px 8px;border-radius:99px;background:var(--surface-2);color:var(--text-2);white-space:nowrap}
+.chip.ok{color:var(--good)}.chip.no{color:var(--warn)}
+.clips{display:grid;gap:14px;grid-template-columns:repeat(auto-fill,minmax(280px,1fr))}
+.clip{display:flex;flex-direction:column;gap:10px}
+.media{position:relative;aspect-ratio:9/16;max-height:430px;background:#000;border-radius:10px;overflow:hidden}
+.media video,.media img{width:100%;height:100%;object-fit:contain;display:block}
+.score{position:absolute;top:10px;left:10px;font-weight:750;font-size:15px;padding:4px 9px;border-radius:9px;background:rgba(0,0,0,.72);color:#fff}
+.score i{font-style:normal;font-weight:500;opacity:.7;font-size:12px}
+.meter{height:6px;border-radius:3px;background:var(--surface-2);overflow:hidden}.meter>div{height:100%;background:var(--series-1);border-radius:3px}
+input,textarea{width:100%;font:inherit;color:var(--text);background:var(--surface-2);border:1px solid var(--line);border-radius:9px;padding:7px 9px}
+textarea{min-height:64px;resize:vertical}
+.btn{border:1px solid var(--line);background:var(--surface);color:var(--text);padding:7px 12px;border-radius:9px;font:inherit;cursor:pointer;font-weight:550}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}.btn.danger{color:var(--bad)}.btn:disabled{opacity:.45;cursor:not-allowed}
+table{width:100%;border-collapse:collapse;font-size:14px}th,td{text-align:left;padding:9px 8px;border-bottom:1px solid var(--line)}th{color:var(--text-2);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.04em}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+.chart{position:relative}.chart svg{display:block;width:100%;height:auto;overflow:visible}
+.tip{position:absolute;pointer-events:none;background:var(--text);color:var(--bg);font-size:12px;padding:5px 8px;border-radius:7px;white-space:nowrap;transform:translate(-50%,-120%);opacity:0;transition:opacity .1s}
+.empty{padding:28px;text-align:center;color:var(--text-2);border:1px dashed var(--line);border-radius:var(--radius)}
+.log{font:12.5px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;max-height:520px;overflow:auto}.log div{padding:3px 0;border-bottom:1px solid var(--line)}
+.err{color:var(--bad)}.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--text);color:var(--bg);padding:10px 16px;border-radius:10px;opacity:0;transition:opacity .2s;max-width:min(92vw,640px);z-index:9}
+.toast.on{opacity:1}section{display:none}section.on{display:block}
+@media (max-width:600px){.right{margin-left:0;width:100%}.tile .v{font-size:22px}}
+</style>
+</head>
+<body>
+<header><div class="bar">
+  <div class="brand">Clip<span>●</span>Factory</div>
+  <nav id="nav">
+    <button data-tab="live" class="on">Lives</button>
+    <button data-tab="review">À valider <span class="badge" id="b-review">0</span></button>
+    <button data-tab="all">Tous les clips</button>
+    <button data-tab="planning">Planning</button>
+    <button data-tab="stats">Stats TikTok</button>
+    <button data-tab="costs">Coûts</button>
+    <button data-tab="log">Journal</button>
+  </nav>
+  <div class="right"><span id="engine"></span><button class="btn" id="theme" title="Thème">◐</button></div>
+</div></header>
+<main>
+<section id="live" class="on">
+  <div class="tiles" id="tiles"></div>
+  <h2>Streams surveillés</h2><div class="grid" id="streamers"></div>
+  <h2>Activité du chat (messages / 10 s)</h2><div class="grid" id="chats"></div>
+</section>
+<section id="review"><div class="clips" id="review-list"></div></section>
+<section id="all"><div class="card"><table><thead><tr><th>#</th><th>Streamer</th><th>Titre</th><th class="num">Score</th><th>Catégorie</th><th>Statut</th><th class="num">Durée</th></tr></thead><tbody id="all-list"></tbody></table></div></section>
+<section id="planning">
+  <div class="row" style="margin-bottom:12px"><span id="tk-state" class="muted"></span><a class="btn" href="/tiktok/connect">Connecter TikTok</a></div>
+  <div class="card"><table><thead><tr><th>Date</th><th>Clip</th><th>Mode</th><th>Statut</th><th></th></tr></thead><tbody id="pub-list"></tbody></table></div>
+</section>
+<section id="stats"><div class="card"><h2 style="margin-top:0">Vues par vidéo publiée</h2><div class="chart" id="views-chart"></div></div>
+  <div class="card" style="margin-top:12px"><table><thead><tr><th>Clip</th><th class="num">Vues</th><th class="num">J'aime</th><th class="num">Comm.</th><th class="num">Partages</th></tr></thead><tbody id="stats-list"></tbody></table></div></section>
+<section id="costs"><div class="tiles" id="cost-tiles"></div>
+  <div class="card" style="margin-top:12px"><h2 style="margin-top:0">Coût API Claude par jour (USD, 30 j)</h2><div class="chart" id="cost-chart"></div></div></section>
+<section id="log"><div class="card log" id="log-list"></div></section>
+</main>
+<div class="toast" id="toast"></div>
+<script>
+const $=s=>document.querySelector(s), esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const api=async(u,o={})=>{const r=await fetch(u,{headers:{'Content-Type':'application/json'},...o});if(!r.ok){let m=r.statusText;try{m=(await r.json()).detail||m}catch{};throw new Error(m)}return r.json()};
+const toast=m=>{const t=$('#toast');t.textContent=m;t.classList.add('on');clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove('on'),3800)};
+const fmtDate=ts=>ts?new Date(ts*1000).toLocaleString('fr-FR',{weekday:'short',day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'—';
+const fmtDur=s=>{s=Math.round(s||0);const h=Math.floor(s/3600),m=Math.floor(s%3600/60);return h?`${h} h ${String(m).padStart(2,'0')}`:`${m} min`};
+const STATUS={candidat:'Détecté',en_attente:'À valider',programme:'Programmé',publie:'Publié',rejete:'Rejeté',faible:'Score faible',doublon:'Doublon',erreur:'Erreur',a_publier:'À publier (manuel)',envoi:'Envoi…',envoye:'Envoyé',annule:'Annulé'};
+let tab=location.hash.slice(1)||'live', state={};
+try{const t=localStorage.getItem('cf-theme');if(t)document.documentElement.dataset.theme=t}catch{}
+$('#theme').onclick=()=>{const d=document.documentElement,cur=d.dataset.theme||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'),n=cur==='dark'?'light':'dark';d.dataset.theme=n;try{localStorage.setItem('cf-theme',n)}catch{};refresh()};
+document.querySelectorAll('#nav button').forEach(b=>b.onclick=()=>show(b.dataset.tab));
+function show(t){tab=t;location.hash=t;document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.tab===t));document.querySelectorAll('main>section').forEach(s=>s.classList.toggle('on',s.id===t));refresh()}
+
+/* Graphiques SVG : ligne (activité) et barres (coûts, vues), une seule série, infobulle au survol. */
+function lineChart(el,pts,{h=90,label=v=>v}={}){
+  if(!pts.length){el.innerHTML='<div class="muted small">Pas encore de données de chat.</div>';return}
+  const w=320,pad=4,max=Math.max(1,...pts.map(p=>p.y)),x0=pts[0].x,x1=pts.at(-1).x||x0+1;
+  const X=x=>pad+(w-2*pad)*((x-x0)/Math.max(1,x1-x0)),Y=y=>h-6-(h-14)*(y/max);
+  const d=pts.map((p,i)=>`${i?'L':'M'}${X(p.x).toFixed(1)},${Y(p.y).toFixed(1)}`).join('');
+  el.innerHTML=`<svg viewBox="0 0 ${w} ${h}" role="img" aria-label="Activité du chat"><line x1="0" x2="${w}" y1="${h-6}" y2="${h-6}" stroke="var(--line)"/><path d="${d}" fill="none" stroke="var(--series-1)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/><line class="cx" y1="0" y2="${h-6}" stroke="var(--text-2)" stroke-dasharray="2 3" opacity="0"/><circle class="cd" r="4" fill="var(--series-1)" stroke="var(--surface)" stroke-width="2" opacity="0"/><rect width="${w}" height="${h}" fill="transparent"/></svg><div class="tip"></div>`;
+  const svg=el.querySelector('svg'),tip=el.querySelector('.tip'),cx=el.querySelector('.cx'),cd=el.querySelector('.cd');
+  svg.onmousemove=e=>{const r=svg.getBoundingClientRect(),vx=(e.clientX-r.left)/r.width*w;let best=pts[0];for(const p of pts)if(Math.abs(X(p.x)-vx)<Math.abs(X(best.x)-vx))best=p;
+    cx.setAttribute('x1',X(best.x));cx.setAttribute('x2',X(best.x));cx.setAttribute('opacity',1);cd.setAttribute('cx',X(best.x));cd.setAttribute('cy',Y(best.y));cd.setAttribute('opacity',1);
+    tip.textContent=label(best);tip.style.left=(X(best.x)/w*r.width)+'px';tip.style.top=(Y(best.y)/h*r.height)+'px';tip.style.opacity=1};
+  svg.onmouseleave=()=>{tip.style.opacity=0;cx.setAttribute('opacity',0);cd.setAttribute('opacity',0)};
+}
+function barChart(el,bars,{h=160,fmt=v=>v}={}){
+  if(!bars.length){el.innerHTML='<div class="empty">Aucune donnée pour l\'instant.</div>';return}
+  const w=640,pad=24,max=Math.max(...bars.map(b=>b.v),1e-9),bw=Math.min(40,Math.max(4,(w-2*pad)/bars.length-2));
+  el.innerHTML=`<svg viewBox="0 0 ${w} ${h+22}" role="img" aria-label="Graphique en barres"><line x1="${pad}" x2="${w-pad}" y1="${h}" y2="${h}" stroke="var(--line)"/>${bars.map((b,i)=>{const bh=Math.max(1,(h-10)*b.v/max),x=pad+i*((w-2*pad)/bars.length)+1;return `<path data-i="${i}" d="M${x},${h}V${h-bh+4}q0,-4 4,-4h${bw-8}q4,0 4,4V${h}Z" fill="var(--series-1)"/>`}).join('')}<text x="${pad}" y="${h+16}" font-size="11" fill="var(--text-2)">${esc(bars[0].l)}</text><text x="${w-pad}" y="${h+16}" font-size="11" fill="var(--text-2)" text-anchor="end">${esc(bars.at(-1).l)}</text><text x="${w-pad}" y="10" font-size="11" fill="var(--text-2)" text-anchor="end">max ${esc(fmt(max))}</text></svg><div class="tip"></div>`;
+  const svg=el.querySelector('svg'),tip=el.querySelector('.tip');
+  svg.querySelectorAll('path[data-i]').forEach(p=>{p.onmouseenter=e=>{const b=bars[+p.dataset.i],r=svg.getBoundingClientRect(),bb=p.getBoundingClientRect();tip.textContent=`${b.l} : ${fmt(b.v)}`;tip.style.left=(bb.left-r.left+bb.width/2)+'px';tip.style.top=(bb.top-r.top)+'px';tip.style.opacity=1;p.setAttribute('opacity',.8)};p.onmouseleave=()=>{tip.style.opacity=0;p.removeAttribute('opacity')}});
+}
+
+async function renderLive(){
+  const o=state.o, lives=o.streamers.filter(s=>s.live), c=o.clip_counts;
+  $('#tiles').innerHTML=[['En live',`${lives.length} / ${o.streamers.filter(s=>s.actif).length}`],['Enregistrés',o.live_streams.length],['À valider',c.en_attente||0],['Programmés',c.programme||0],['Publiés',c.publie||0],['Disque données',`${o.disk.data_gb} Go`]]
+    .map(([l,v])=>`<div class="card tile"><div class="v">${esc(v)}</div><div class="l">${esc(l)}</div></div>`).join('');
+  $('#streamers').innerHTML=o.streamers.map(s=>`<div class="card"><div class="row"><span class="dot ${s.live?'live':''}"></span><b>${esc(s.nom)}</b><span class="muted small">twitch.tv/${esc(s.login)}</span></div>
+    <div class="small muted" style="margin:6px 0">${s.live?`${esc(s.live.game)} · ${Number(s.live.viewers).toLocaleString('fr-FR')} spectateurs<br>${esc(s.live.title).slice(0,90)}`:(s.actif?'Hors ligne':'Désactivé')}</div>
+    <span class="chip ${s.can_publish?'ok':'no'}">${s.can_publish?'✓ publication autorisée':'⚠ autorisation manquante'}</span></div>`).join('');
+  if(!o.live_streams.length){$('#chats').innerHTML='<div class="empty">Aucun live en cours. Le moniteur vérifie toutes les minutes.</div>';return}
+  $('#chats').innerHTML=o.live_streams.map(s=>`<div class="card"><div class="row"><span class="dot live"></span><b>${esc(s.login)}</b><span class="muted small">${fmtDur(s.recorded_seconds)} enregistrées</span></div><div class="chart" id="ch-${s.id}" style="margin-top:8px"></div></div>`).join('');
+  for(const s of o.live_streams){const rows=await api(`/api/chat/${s.id}`);lineChart($(`#ch-${s.id}`),rows.map(r=>({x:r.wall,y:r.messages,h:r.hype})),{label:p=>`${new Date(p.x*1000).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})} · ${p.y} msg · ${p.h} réactions`})}
+}
+function clipCard(c){
+  const sig=c.signals||{},risks=(c.risks||[]).length?`<div class="small" style="color:var(--warn)">⚠ ${esc(c.risks.join(' · '))}</div>`:'';
+  return `<div class="card clip" id="clip-${c.id}">
+    <div class="media">${c.has_video?`<video src="/media/clip/${c.id}" ${c.has_thumb?`poster="/media/thumb/${c.id}"`:''} controls preload="none" playsinline></video>`:`<div class="empty" style="height:100%">${esc(STATUS[c.status]||c.status)}</div>`}<div class="score">${c.score}<i>/100</i></div></div>
+    <div class="row"><b>${esc(c.login)}</b><span class="chip">${esc(c.category)}</span><span class="chip">${Math.round(c.duration||0)} s · ${esc(c.layout||'')}</span><span class="chip">${esc(c.engine||'')}</span></div>
+    <div class="meter" title="Score viral ${c.score}/100"><div style="width:${c.score}%"></div></div>
+    <div class="small muted">${esc(c.reason)}</div>${risks}
+    <label class="small muted">Accroche (3 premières secondes)<input data-f="hook" value="${esc(c.hook)}"></label>
+    <label class="small muted">Titre<input data-f="title" value="${esc(c.title)}"></label>
+    <label class="small muted">Description & hashtags<textarea data-f="description">${esc(c.description)}</textarea></label>
+    <div class="small muted">Créneau suggéré : ${c.best_time?new Date(c.best_time).toLocaleString('fr-FR',{weekday:'long',hour:'2-digit',minute:'2-digit'}):'—'} · réaction chat : ${esc(sig.reaction||'—')}</div>
+    <div class="row"><button class="btn primary" data-a="approve">Valider & programmer</button><button class="btn" data-a="save">Enregistrer</button><button class="btn" data-a="rerender" title="Remonter avec la nouvelle accroche">Remonter</button><button class="btn danger" data-a="reject">Rejeter</button></div>
+  </div>`;
+}
+async function renderReview(){
+  const list=await api('/api/clips?status=en_attente');
+  $('#review-list').innerHTML=list.length?list.map(clipCard).join(''):'<div class="empty">Rien à valider. Les nouveaux clips apparaissent ici pendant les lives.</div>';
+  list.forEach(c=>{const el=$(`#clip-${c.id}`);el.querySelectorAll('[data-a]').forEach(b=>b.onclick=async()=>{
+    const body={};el.querySelectorAll('[data-f]').forEach(i=>body[i.dataset.f]=i.value);b.disabled=true;
+    try{if(b.dataset.a!=='reject')await api(`/api/clips/${c.id}/edit`,{method:'POST',body:JSON.stringify(body)});
+      if(b.dataset.a==='approve'){const p=await api(`/api/clips/${c.id}/approve`,{method:'POST',body:'{}'});toast(`Programmé : ${fmtDate(p.scheduled_at)}`)}
+      else if(b.dataset.a==='reject'){await api(`/api/clips/${c.id}/reject`,{method:'POST'});toast('Clip rejeté')}
+      else if(b.dataset.a==='rerender'){toast('Montage en cours…');await api(`/api/clips/${c.id}/rerender`,{method:'POST'});toast('Clip remonté')}
+      else toast('Enregistré');refresh()}catch(e){toast(e.message)}finally{b.disabled=false}})});
+}
+async function renderAll(){
+  const list=await api('/api/clips?limit=300');
+  $('#all-list').innerHTML=list.map(c=>`<tr><td>${c.id}</td><td>${esc(c.login)}</td><td>${esc(c.title)}${c.error?`<div class="small err">${esc(c.error).slice(0,140)}</div>`:''}</td><td class="num">${c.score}</td><td>${esc(c.category)}</td><td>${esc(STATUS[c.status]||c.status)}</td><td class="num">${Math.round(c.duration||0)} s</td></tr>`).join('')||'<tr><td colspan="7" class="muted">Aucun clip.</td></tr>';
+}
+async function renderPlanning(){
+  $('#tk-state').textContent=`Mode : ${state.o.publish_mode} · TikTok ${state.o.tiktok_connected?'connecté ✓':'non connecté'}`;
+  const list=await api('/api/publications');
+  $('#pub-list').innerHTML=list.map(p=>`<tr><td>${fmtDate(p.scheduled_at)}</td><td><b>${esc(p.login)}</b> — ${esc(p.title)}${p.error?`<div class="small err">${esc(p.error)}</div>`:''}</td><td>${esc(p.mode)}</td><td>${esc(STATUS[p.status]||p.status)}</td>
+    <td class="row">${['programme','a_publier'].includes(p.status)?`<a class="btn" href="/media/clip/${p.clip_id}" download>Télécharger</a><button class="btn" data-done="${p.id}">Marquer publié</button><button class="btn danger" data-cancel="${p.id}">Annuler</button>`:''}</td></tr>`).join('')||'<tr><td colspan="5" class="muted">Aucune publication programmée.</td></tr>';
+  document.querySelectorAll('[data-cancel]').forEach(b=>b.onclick=async()=>{await api(`/api/publications/${b.dataset.cancel}/cancel`,{method:'POST'});refresh()});
+  document.querySelectorAll('[data-done]').forEach(b=>b.onclick=async()=>{await api(`/api/publications/${b.dataset.done}/done`,{method:'POST'});refresh()});
+}
+async function renderStats(){
+  const list=(await api('/api/publications')).filter(p=>p.stats);
+  barChart($('#views-chart'),list.map(p=>({l:`#${p.clip_id} ${p.login}`,v:p.stats.view_count||0})),{fmt:v=>Math.round(v).toLocaleString('fr-FR')});
+  $('#stats-list').innerHTML=list.map(p=>`<tr><td>${esc(p.title)}</td>${['view_count','like_count','comment_count','share_count'].map(k=>`<td class="num">${(p.stats[k]||0).toLocaleString('fr-FR')}</td>`).join('')}</tr>`).join('')||'<tr><td colspan="5" class="muted">Les statistiques arrivent après publication via l\'API TikTok (scope video.list).</td></tr>';
+}
+function renderCosts(){
+  const c=state.o.costs,usdEur=0.92,monthLlm=c.llm_30d_usd*usdEur,total=monthLlm+Number(c.server_monthly_eur||0)+Number(c.other_monthly_eur||0);
+  $('#cost-tiles').innerHTML=[['Claude aujourd\'hui',`${c.llm_today_usd.toFixed(2)} $`],['Claude 30 jours',`${c.llm_30d_usd.toFixed(2)} $`],['Serveur / mois',`${Number(c.server_monthly_eur||0).toFixed(2)} €`],['Total estimé / mois',`${total.toFixed(2)} €`],['Disque libre',`${state.o.disk.free_gb} Go`]]
+    .map(([l,v])=>`<div class="card tile"><div class="v">${esc(v)}</div><div class="l">${esc(l)}</div></div>`).join('');
+  const byDay=Object.fromEntries(c.per_day.map(d=>[d.d,d.s])),today=Math.floor(state.o.now/86400)*86400,days=[];
+  for(let i=29;i>=0;i--){const d=today-i*86400;days.push({l:new Date(d*1000).toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit'}),v:byDay[d]||0})}
+  barChart($('#cost-chart'),c.per_day.length?days:[],{fmt:v=>`${v.toFixed(3)} $`});
+}
+async function renderLog(){const list=await api('/api/events');$('#log-list').innerHTML=list.map(e=>`<div class="${e.level==='error'?'err':''}">${new Date(e.ts*1000).toLocaleString('fr-FR')} — ${esc(e.message)}</div>`).join('')||'<div class="muted">Journal vide.</div>'}
+async function refresh(){
+  try{state.o=await api('/api/overview');$('#b-review').textContent=state.o.clip_counts.en_attente||0;
+    $('#engine').textContent=`Analyse : ${state.o.engine}${state.o.last_poll?` · vérifié ${new Date(state.o.last_poll*1000).toLocaleTimeString('fr-FR')}`:''}`;
+    ({live:renderLive,review:renderReview,all:renderAll,planning:renderPlanning,stats:renderStats,costs:renderCosts,log:renderLog})[tab]()}catch(e){toast(`Erreur : ${e.message}`)}
+}
+addEventListener("hashchange",()=>{const t=location.hash.slice(1);if(t&&t!==tab)show(t)});
+show(tab);setInterval(()=>{if(!['review'].includes(tab)||!document.activeElement.matches('input,textarea'))refresh()},15000);
+</script>
+</body>
+</html>

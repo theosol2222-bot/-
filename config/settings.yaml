@@ -1,0 +1,51 @@
+# Réglages de l'usine à clips. Les secrets (clés API) vont dans .env, jamais ici.
+
+data_dir: data                 # enregistrements, clips, base SQLite
+monitor:
+  poll_seconds: 60             # fréquence de vérification des lives (API Helix)
+  max_parallel_streams: 4      # lives enregistrés en même temps (CPU/disque)
+recording:
+  quality: 720p60,720p,best    # 720p suffit pour du 1080x1920 recadré, ~2 Go/h
+  keep_raw_hours: 6            # suppression des enregistrements bruts après le live
+analysis:
+  pass_seconds: 300            # une passe d'analyse toutes les 5 min pendant le live
+  overlap_seconds: 90          # chevauchement entre passes (moment à cheval)
+  candidates_per_pass: 3       # pics retenus avant analyse fine
+  min_signal: 1.5              # seuil du signal combiné pour devenir candidat
+  context_before: 60           # secondes de contexte transcrites avant le pic
+  context_after: 25
+  chat_delay: 6                # le chat réagit ~6 s après le moment
+  whisper_model: small         # tiny | base | small | medium (CPU : small = bon compromis FR)
+  min_viral_score: 55          # en dessous : clip non monté
+llm:
+  enabled: true                # nécessite ANTHROPIC_API_KEY ; sinon analyse heuristique
+  model: claude-opus-5-5       # claude-haiku-5-5 divise le coût par ~40 (voir docs/COUTS.md)
+  effort: low
+  max_calls_per_hour: 30       # garde-fou budgétaire
+  min_prefilter_score: 40      # Claude n'analyse que les candidats >= 40 au score heuristique (gratuit)
+render:
+  width: 1080
+  height: 1920
+  min_duration: 20
+  max_duration: 90
+  remove_silences: true
+  silence_min_gap: 1.2         # trou de parole (s) au-delà duquel on coupe
+  loudness_lufs: -14
+  crf: 20
+  preset: medium
+  concurrency: 1               # rendus ffmpeg simultanés
+  font: Inter
+publish:
+  mode: manuel                 # manuel | brouillon_tiktok | direct
+  timezone: Europe/Paris
+  min_gap_minutes: 90          # écart minimal entre deux publications
+  max_per_day: 6
+  same_streamer_gap_hours: 4
+  slots: ["12:15", "17:45", "19:30", "21:15", "22:45"]   # créneaux d'audience FR
+  privacy_level: SELF_ONLY     # obligatoire tant que l'app TikTok n'est pas auditée
+dashboard:
+  host: 127.0.0.1
+  port: 8080
+costs:
+  server_monthly_eur: 0        # ex. 22.99 pour un serveur dédié Hetzner AX42 (voir docs/COUTS.md)
+  other_monthly_eur: 0

@@ -1,0 +1,13 @@
+Clip Factory
+
+Portions of clipfactory/detect/signals.py, clipfactory/twitch/recorder.py and
+clipfactory/media/render.py are Python ports of, and adaptations from,
+skills/3-editing/clip-stream (lib/moments.mjs, lib/live.mjs, lib/layouts.mjs) in
+https://github.com/alisadiq-ai/favstash-ai-video-editing-skills
+Copyright the FavStash authors, licensed under the Apache License, Version 2.0
+(http://www.apache.org/licenses/LICENSE-2.0). Changes: ported to Python/numpy,
+French-language normalization and lexicon, repeat/emote signals, reaction
+typology, automatic facecam detection, face tracking, streamlink 8 log format.
+
+Test fixture image: "astronaut" from scikit-image (NASA photograph, public domain).
+French test voice: Piper fr_FR-siwis-medium (downloaded at test time, not redistributed).

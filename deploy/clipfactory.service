@@ -1,0 +1,23 @@
+# /etc/systemd/system/clipfactory.service
+# sudo systemctl enable --now clipfactory ; journalctl -u clipfactory -f
+[Unit]
+Description=Clip Factory (Twitch -> TikTok)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=clip
+WorkingDirectory=/opt/clipfactory
+ExecStart=/opt/clipfactory/.venv/bin/python -m clipfactory run
+Restart=always
+RestartSec=10
+# durcissement
+NoNewPrivileges=true
+ProtectSystem=strict
+ReadWritePaths=/opt/clipfactory/data
+ProtectHome=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

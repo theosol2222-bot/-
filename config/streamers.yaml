@@ -1,0 +1,32 @@
+# Liste des streamers surveillés — modifiez librement, le moniteur relit ce
+# fichier à chaque cycle (pas besoin de redémarrer).
+#
+# Champs :
+#   login         identifiant Twitch (twitch.tv/<login>), en minuscules
+#   nom           nom affiché dans les vidéos et le tableau de bord
+#   actif         false = ignoré
+#   autorisation  aucune | programme_officiel | accord_ecrit | propre_chaine
+#                 -> "aucune" : les clips sont détectés et montés pour test,
+#                    mais la PUBLICATION est bloquée (droits d'auteur).
+#   preuve        lien/notes prouvant l'autorisation (règlement du programme, mail…)
+#   mots_cles     mots qui comptent comme « moment fort » pour cette communauté
+#   layout        auto | split | center | fill
+#   facecam       "x:y:w:h" en pixels source pour forcer la position de la cam
+#
+# `clipfactory verify` vérifie via l'API Twitch officielle que chaque login existe.
+
+streamers:
+  - { login: squeezie,   nom: Squeezie,   actif: true, autorisation: aucune, mots_cles: [] }
+  - { login: gotaga,     nom: Gotaga,     actif: true, autorisation: aucune, mots_cles: [top 1, clutch] }
+  - { login: kamet0,     nom: Kameto,     actif: true, autorisation: aucune, mots_cles: [karmine, kcorp] }
+  - { login: aminematue, nom: Aminematue, actif: true, autorisation: aucune, mots_cles: [] }
+  - { login: jltomy,     nom: JL Tomy,    actif: true, autorisation: aucune, mots_cles: [] }
+  - { login: michou,     nom: Michou,     actif: true, autorisation: aucune, mots_cles: [] }
+  - { login: inoxtag,    nom: Inoxtag,    actif: true, autorisation: aucune, mots_cles: [] }
+  - { login: domingo,    nom: Domingo,    actif: true, autorisation: aucune, mots_cles: [popcorn] }
+  - { login: zerator,    nom: ZeratoR,    actif: true, autorisation: aucune, mots_cles: [zevent, trackmania] }
+  - { login: locklear,   nom: Locklear,   actif: true, autorisation: aucune, mots_cles: [] }
+  - { login: chowh1,     nom: ChowH1,     actif: true, autorisation: aucune, mots_cles: [] }
+  - { login: etoiles,    nom: Étoiles,    actif: true, autorisation: aucune, mots_cles: [] }
+  # Login Twitch de Mister V non confirmé : lancez `clipfactory verify` et corrigez si besoin.
+  - { login: misterv,    nom: Mister V,   actif: true, autorisation: aucune, mots_cles: [] }

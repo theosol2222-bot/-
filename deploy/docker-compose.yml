@@ -1,0 +1,14 @@
+services:
+  clipfactory:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    restart: unless-stopped
+    env_file: ../.env              # secrets : jamais dans l'image
+    volumes:
+      - ../data:/app/data
+      - ../config:/app/config:ro   # streamers.yaml modifiable sans rebuild
+    ports:
+      - "127.0.0.1:8080:8080"      # accessible via tunnel SSH ou reverse-proxy HTTPS uniquement
+    cpus: "6"
+    mem_limit: 8g
